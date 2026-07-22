@@ -47,6 +47,30 @@ Confirm the installation:
 instadown --version
 ```
 
+## Release binaries
+
+Every release includes prebuilt binaries for:
+
+- Linux x86_64
+- macOS Apple Silicon
+- macOS Intel
+- Windows x86_64
+
+Download `install.sh` from the latest release on Linux or macOS, then run:
+
+```bash
+sh install.sh
+```
+
+On Windows, download `install.ps1` and run it in PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+The installers place `instadown` in a user-local directory. `yt-dlp` and FFmpeg must
+still be installed separately.
+
 ## Usage
 
 Download a post or reel:
@@ -114,4 +138,3 @@ following Instagram's terms and applicable copyright laws.
 ## License
 
 MIT
-
