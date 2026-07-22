@@ -1,7 +1,7 @@
 # instadown
 
 `instadown` is a fast Rust CLI for downloading Instagram posts and reels. It shows
-useful post metadata, uses a clean colored terminal interface, and saves media in the
+post metadata and saves media in the
 current directory with shell-friendly filenames.
 
 ## Features
@@ -77,8 +77,7 @@ Run `instadown --help` for the complete command reference.
 
 ## Output
 
-Files are saved in the directory where the command is run. Filenames use underscores
-instead of spaces, for example:
+Files are saved in the directory where the command is run. 
 
 ```text
 HYPEWHIP_DbDW-49haLj_Video_by_hypewhip.mp4
@@ -97,21 +96,13 @@ cookies from a browser where you are already signed in:
 instadown --cookies-from-browser firefox <url>
 ```
 
-Pop!_OS may store Firefox profiles in a nonstandard location:
+Some Linux distros may store Firefox profiles in a nonstandard location:
 
 ```bash
 instadown --cookies-from-browser firefox:$HOME/.config/mozilla/firefox <url>
 ```
 
 If a public post unexpectedly fails, update `yt-dlp` before retrying.
-
-## Development
-
-```bash
-cargo test
-cargo clippy --all-targets -- -D warnings
-cargo build --release
-```
 
 ## Legal
 
