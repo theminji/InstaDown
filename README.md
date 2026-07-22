@@ -75,6 +75,8 @@ instadown --cookies-from-browser firefox <url>
 
 Run `instadown --help` for the complete command reference.
 
+![Screenshot](./assets/image.png)
+
 ## Output
 
 Files are saved in the directory where the command is run. 
