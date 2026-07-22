@@ -6,7 +6,7 @@ current directory with shell-friendly filenames.
 
 ## Features
 
-- Download public posts, reels, images, and carousels
+- Download public reels, image posts, and mixed-media carousels
 - Download audio as MP3 with `--audio`
 - Include video and audio in video downloads
 - Use light compression by default for smaller files
@@ -112,6 +112,9 @@ HYPEWHIP_DbDW-49haLj_Video_by_hypewhip.mp4
 Default video downloads use Instagram's rendition capped at 1280 pixels on the long
 edge, normally 720p. This reduces file size without a slow local re-encode.
 `--no-compress` downloads the best available resolution instead.
+
+Images and carousel items are downloaded at the highest source resolution exposed by
+Instagram. Mixed carousels preserve their original order with numbered filenames.
 
 ## Login and rate-limit errors
 
