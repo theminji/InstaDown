@@ -8,12 +8,14 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
-use console::Style;
+use console::{Emoji, Style};
 use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
 use serde::Deserialize;
 use url::Url;
 
+static CAMERA: Emoji<'_, '_> = Emoji("📸 ", "");
+static CHECK: Emoji<'_, '_> = Emoji("✓ ", "+ ");
 const FILE_MARKER: &str = "__INSTADOWN_FILE__";
 
 #[derive(Debug, Parser)]
@@ -21,16 +23,12 @@ const FILE_MARKER: &str = "__INSTADOWN_FILE__";
     name = "instadown",
     version,
     about = "Download an Instagram post or reel",
-    after_help = "Examples:\n  instadown https://www.instagram.com/reel/ABC123/\n  instadown --no-compress https://instagram.com/p/ABC123/\n  instadown --audio https://instagram.com/reel/ABC123/"
+    after_help = "Examples:\n  instadown https://www.instagram.com/reel/ABC123/\n  instadown --audio https://instagram.com/p/ABC123/"
 )]
 struct Cli {
     /// Extract audio only and save it as an MP3
     #[arg(long)]
     audio: bool,
-
-    /// Keep the original media quality without the default light compression
-    #[arg(long)]
-    no_compress: bool,
 
     /// Load login cookies from a browser (for example: firefox or chrome)
     #[arg(long, value_name = "BROWSER[:PROFILE]")]
@@ -55,11 +53,7 @@ struct Metadata {
 
 fn main() {
     if let Err(error) = run() {
-        eprintln!(
-            "{} {}",
-            Style::new().red().bold().apply_to("[error]"),
-            error
-        );
+        eprintln!("{} {}", Style::new().red().bold().apply_to("error:"), error);
         std::process::exit(1);
     }
 }
@@ -78,7 +72,7 @@ fn run() -> Result<()> {
         "Install ffmpeg with your system package manager",
     )?;
 
-    let spinner = spinner("Fetching post metadata...");
+    let spinner = spinner("Fetching post metadata…");
     let metadata = match fetch_metadata(url.as_str(), cli.cookies_from_browser.as_deref()) {
         Ok(metadata) => {
             spinner.finish_and_clear();
@@ -90,13 +84,8 @@ fn run() -> Result<()> {
         }
     };
 
-    print_metadata(&metadata, cli.audio, !cli.no_compress);
-    download(
-        url.as_str(),
-        cli.audio,
-        cli.no_compress,
-        cli.cookies_from_browser.as_deref(),
-    )?;
+    print_metadata(&metadata, cli.audio);
+    download(url.as_str(), cli.audio, cli.cookies_from_browser.as_deref())?;
     Ok(())
 }
 
@@ -115,7 +104,7 @@ fn validate_instagram_url(input: &str) -> Result<Url> {
     let kind = segments.next().unwrap_or_default();
     let shortcode = segments.next().unwrap_or_default();
     if !matches!(kind, "p" | "reel" | "reels" | "tv") || shortcode.is_empty() {
-        bail!("expected an Instagram post or reel URL (.../p/ID or .../reel/ID)");
+        bail!("expected an Instagram post or reel URL (…/p/ID or …/reel/ID)");
     }
     Ok(url)
 }
@@ -148,21 +137,15 @@ fn fetch_metadata(url: &str, cookies_from_browser: Option<&str>) -> Result<Metad
     serde_json::from_slice(&output.stdout).context("Instagram returned unreadable metadata")
 }
 
-fn print_metadata(metadata: &Metadata, audio: bool, compress: bool) {
-    let heading = Style::new().cyan().bright().bold();
-    let label = Style::new().cyan();
+fn print_metadata(metadata: &Metadata, audio: bool) {
+    let heading = Style::new().cyan().bold();
     let muted = Style::new().dim();
-    let accent = Style::new().yellow();
-    println!(
-        "{} {}",
-        heading.apply_to("INSTADOWN"),
-        muted.apply_to("/ Instagram media")
-    );
+    println!("{}{}", CAMERA, heading.apply_to("Instagram media"));
 
     if let Some(author) = metadata.uploader.as_ref().or(metadata.uploader_id.as_ref()) {
         println!(
             "  {}  @{}",
-            label.apply_to("creator "),
+            muted.apply_to("Creator"),
             author.trim_start_matches('@')
         );
     }
@@ -171,7 +154,7 @@ fn print_metadata(metadata: &Metadata, audio: bool, compress: bool) {
         .as_deref()
         .filter(|value| !value.trim().is_empty())
     {
-        println!("  {}  {}", label.apply_to("title   "), one_line(title, 76));
+        println!("  {}  {}", muted.apply_to("Title  "), one_line(title, 76));
     } else if let Some(description) = metadata
         .description
         .as_deref()
@@ -179,12 +162,12 @@ fn print_metadata(metadata: &Metadata, audio: bool, compress: bool) {
     {
         println!(
             "  {}  {}",
-            label.apply_to("caption "),
+            muted.apply_to("Caption"),
             one_line(description, 76)
         );
     }
     if let Some(id) = metadata.id.as_deref() {
-        println!("  {}  {}", label.apply_to("post id "), muted.apply_to(id));
+        println!("  {}  {}", muted.apply_to("Post ID"), id);
     }
 
     let mut details = Vec::new();
@@ -206,34 +189,20 @@ fn print_metadata(metadata: &Metadata, audio: bool, compress: bool) {
         details.push(format!("{count} items"));
     }
     if !details.is_empty() {
-        println!(
-            "  {}  {}",
-            label.apply_to("details "),
-            details.join("  |  ")
-        );
+        println!("  {}  {}", muted.apply_to("Details"), details.join("  ·  "));
     }
-    let mode = if audio && compress {
-        "audio (MP3, lightly compressed)"
-    } else if audio {
-        "audio (MP3, highest quality)"
-    } else if compress {
-        "video / image (light compression)"
-    } else {
-        "video / image (original quality)"
-    };
     println!(
         "  {}  {}\n",
-        label.apply_to("mode    "),
-        accent.apply_to(mode)
+        muted.apply_to("Mode   "),
+        if audio {
+            "audio (MP3)"
+        } else {
+            "video / image"
+        }
     );
 }
 
-fn download(
-    url: &str,
-    audio: bool,
-    no_compress: bool,
-    cookies_from_browser: Option<&str>,
-) -> Result<()> {
+fn download(url: &str, audio: bool, cookies_from_browser: Option<&str>) -> Result<()> {
     let template = "%(uploader|instagram)s_%(id)s_%(title).80B.%(ext)s";
     let mut command = Command::new("yt-dlp");
     command.args([
@@ -248,21 +217,20 @@ fn download(
         &format!("after_move:{FILE_MARKER}%(filepath)s"),
     ]);
     if audio {
-        command
-            .args([
-                "--extract-audio",
-                "--audio-format",
-                "mp3",
-                "--audio-quality",
-            ])
-            .arg(if no_compress { "0" } else { "4" });
+        command.args([
+            "--extract-audio",
+            "--audio-format",
+            "mp3",
+            "--audio-quality",
+            "0",
+        ]);
     } else {
-        let format = if no_compress {
-            "bestvideo+bestaudio/best"
-        } else {
-            "bestvideo[width<=1280][height<=1280]+bestaudio/best[width<=1280][height<=1280]/best"
-        };
-        command.args(["--format", format, "--merge-output-format", "mp4"]);
+        command.args([
+            "--format",
+            "bestvideo+bestaudio/best",
+            "--merge-output-format",
+            "mp4",
+        ]);
     }
     add_cookie_args(&mut command, cookies_from_browser);
     command
@@ -316,16 +284,13 @@ fn download(
     progress.set_position(100);
     progress.finish_and_clear();
     if files.is_empty() {
-        println!(
-            "{} Download complete",
-            Style::new().green().bold().apply_to("[done]")
-        );
+        println!("{}Download complete", Style::new().green().apply_to(CHECK));
     } else {
         for path in files {
             println!(
-                "{} Saved {}",
-                Style::new().green().bold().apply_to("[done]"),
-                Style::new().cyan().bold().apply_to(path.display())
+                "{}Saved {}",
+                Style::new().green().apply_to(CHECK),
+                Style::new().bold().apply_to(path.display())
             );
         }
     }
@@ -341,9 +306,9 @@ fn add_cookie_args(command: &mut Command, cookies_from_browser: Option<&str>) {
 fn spinner(message: &'static str) -> ProgressBar {
     let bar = ProgressBar::new_spinner();
     bar.set_style(
-        ProgressStyle::with_template("{spinner:.cyan.bright} {msg:.cyan.bright}")
+        ProgressStyle::with_template("{spinner:.cyan} {msg}")
             .expect("valid spinner style")
-            .tick_strings(&["-", "\\", "|", "/"]),
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
     );
     bar.set_message(message);
     bar.enable_steady_tick(Duration::from_millis(80));
@@ -353,13 +318,10 @@ fn spinner(message: &'static str) -> ProgressBar {
 fn download_bar() -> ProgressBar {
     let bar = ProgressBar::new(100);
     bar.set_style(
-        ProgressStyle::with_template(
-            "{spinner:.cyan.bright} {msg:.cyan.bright.bold} [{bar:32.cyan.bright/black.bright}] {pos:>3}%",
-        )
-        .expect("valid progress style")
-        .progress_chars("=>-"),
+        ProgressStyle::with_template("{spinner:.cyan} Downloading  [{bar:32.cyan/dim}] {pos:>3}%")
+            .expect("valid progress style")
+            .progress_chars("━╸─"),
     );
-    bar.set_message("Downloading");
     bar.enable_steady_tick(Duration::from_millis(100));
     bar
 }
@@ -390,9 +352,9 @@ fn one_line(value: &str, max_chars: usize) -> String {
     }
     let shortened = value
         .chars()
-        .take(max_chars.saturating_sub(3))
+        .take(max_chars.saturating_sub(1))
         .collect::<String>();
-    format!("{shortened}...")
+    format!("{shortened}…")
 }
 
 fn format_duration(seconds: f64) -> String {
@@ -430,7 +392,7 @@ mod tests {
             one_line("hello\n  friendly world", 20),
             "hello friendly world"
         );
-        assert_eq!(one_line("123456789", 5), "12...");
+        assert_eq!(one_line("123456789", 5), "1234…");
     }
 
     #[test]
@@ -440,3 +402,5 @@ mod tests {
         assert_eq!(format_duration(65.2), "1:05");
     }
 }
+
+// I love you all mwah <3
