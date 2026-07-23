@@ -33,21 +33,9 @@ Keep `yt-dlp` updated because Instagram changes frequently:
 pipx upgrade yt-dlp
 ```
 
-## Install
+## Releases
 
-Clone the repository, enter its directory, and run:
-
-```bash
-cargo install --path .
-```
-
-Confirm the installation:
-
-```bash
-instadown --version
-```
-
-## Release binaries
+Go to [releases](https://github.com/theminji/InstaDown/releases/) to download the most recent version.
 
 Every release includes prebuilt binaries for:
 
@@ -70,6 +58,20 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 The installers place `instadown` in a user-local directory. `yt-dlp` and FFmpeg must
 still be installed separately.
+
+## Manual Install
+
+Clone the repository, enter its directory, and run:
+
+```bash
+cargo install --path .
+```
+
+Confirm the installation:
+
+```bash
+instadown --version
+```
 
 ## Usage
 
